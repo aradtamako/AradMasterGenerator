@@ -2,6 +2,7 @@ using Core.NeopleOpenApi.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Polly;
+using Polly.Extensions.Http;
 using System;
 using System.IO;
 using System.Net;
@@ -22,6 +23,11 @@ namespace Core.NeopleOpenApi
         {
             ApiKey = apiKey;
 
+            var policy = HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .OrResult(x => x.StatusCode == HttpStatusCode.BadRequest)
+                .WaitAndRetryAsync(3, _ => TimeSpan.FromSeconds(1));
+
             var services = new ServiceCollection();
             services
                 .AddHttpClient(HttpClientName, x =>
@@ -33,7 +39,7 @@ namespace Core.NeopleOpenApi
                     UseProxy = Config.Config.Instance.Proxy.Enabled,
                     Proxy = new WebProxy(Config.Config.Instance.Proxy.Host, Config.Config.Instance.Proxy.Port)
                 })
-                .AddTransientHttpErrorPolicy(x => x.WaitAndRetryAsync(3, _ => TimeSpan.FromSeconds(1)));
+                .AddPolicyHandler(policy);
 
             var provider = services.AddHttpClient().BuildServiceProvider();
             var factory = provider.GetRequiredService<IHttpClientFactory>();
