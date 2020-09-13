@@ -12,6 +12,9 @@ namespace Core.NeopleOpenApi
 {
     public class NeopleOpenApiClient
     {
+        private const string HttpClientName = "NeopleOpenApiClient";
+        private const string NeopleOpenApiBaseAddress = "https://api.neople.co.kr/";
+
         private static HttpClient Client { get; set; } = default!;
         private string ApiKey { get; set; }
 
@@ -21,9 +24,9 @@ namespace Core.NeopleOpenApi
 
             var services = new ServiceCollection();
             services
-                .AddHttpClient("NeopleOpenApiClient", x =>
+                .AddHttpClient(HttpClientName, x =>
                 {
-                    x.BaseAddress = new Uri("https://api.neople.co.kr");
+                    x.BaseAddress = new Uri(NeopleOpenApiBaseAddress);
                 })
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
                 {
@@ -34,18 +37,21 @@ namespace Core.NeopleOpenApi
 
             var provider = services.AddHttpClient().BuildServiceProvider();
             var factory = provider.GetRequiredService<IHttpClientFactory>();
-            Client = factory.CreateClient("NeopleOpenApiClient");
+            Client = factory.CreateClient(HttpClientName);
         }
 
-        public async Task<JobResponse> GetJobList()
+        private async Task<T> Get<T>(string requestUri)
         {
-            var response = await Client.GetAsync($"/df/jobs?apikey={ApiKey}").ConfigureAwait(false);
+            var response = await Client.GetAsync(requestUri).ConfigureAwait(false);
             var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
             var serializer = new JsonSerializer();
             using var streamReader = new StreamReader(stream);
             using var jsonTextReader = new JsonTextReader(streamReader);
-            return serializer.Deserialize<JobResponse>(jsonTextReader) ?? throw new InvalidDataException();
+            return serializer.Deserialize<T>(jsonTextReader) ?? throw new InvalidDataException();
         }
+
+        public async Task<JobResponse> GetJobList()
+            => await Get<JobResponse>($"df/jobs?apikey={ApiKey}").ConfigureAwait(false);
     }
 }
