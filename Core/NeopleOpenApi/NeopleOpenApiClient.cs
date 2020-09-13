@@ -62,5 +62,8 @@ namespace Core.NeopleOpenApi
 
         public async Task<SkillResponse> GetSkillList(string jobId, string jobGrowId)
             => await Get<SkillResponse>($"/df/skills/{jobId}?jobGrowId={jobGrowId}&apikey={ApiKey}").ConfigureAwait(false);
+
+        public async Task<SkillDetail> GetSkillDetail(string jobId, string skillId)
+            => await Get<SkillDetail>($"https://api.neople.co.kr/df/skills/{jobId}/{skillId}?&apikey={ApiKey}").ConfigureAwait(false);
     }
 }
