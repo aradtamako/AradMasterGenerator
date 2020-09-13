@@ -1,3 +1,4 @@
+using Core;
 using Core.Config;
 using Core.DnfOfficialWebSite;
 using Core.Master.Model;
@@ -92,6 +93,8 @@ namespace AradMasterGenerator
 
             await GenerateJobMaster(neopleOpenApiClient).ConfigureAwait(false);
             await GenerateSkillMaster(neopleOpenApiClient, dnfOfficialWebSiteClient).ConfigureAwait(false);
+
+            // DB.Instance.Insert(JsonConvert.DeserializeObject<Core.Master.Model.Skill[]>(File.ReadAllText($"{MasterDirectoryName}/skills.json")));
         }
     }
 }

@@ -16,6 +16,9 @@ namespace Core.Config
         [JsonProperty("proxy")]
         public Proxy Proxy { get; set; } = default!;
 
+        [JsonProperty("database")]
+        public Database Database { get; set; } = default!;
+
         static Config()
         {
             Instance = JsonConvert.DeserializeObject<Config>(File.ReadAllText(FileName));
