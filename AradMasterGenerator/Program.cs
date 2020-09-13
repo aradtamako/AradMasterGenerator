@@ -19,7 +19,7 @@ namespace AradMasterGenerator
     class Program
     {
         const string MasterDirectoryName = "master";
-        const string SkillImageDirectoryName = "master/image/skill";
+        const string SkillImageDirectoryName = "image/skill";
 
         static void CreateDirectoryIfNotExists(string path)
         {
@@ -168,7 +168,7 @@ namespace AradMasterGenerator
                 {
                     filePath.Append($"{skill.JobGrowId}/");
                 }
-                filePath.Append($"{skill.Id}.{Path.GetExtension(skill.IconUrl)}");
+                filePath.Append($"{skill.Id}{Path.GetExtension(skill.IconUrl)}");
 
                 skill.IconPath = $"/{filePath}";
 
@@ -190,7 +190,7 @@ namespace AradMasterGenerator
             await GenerateJobMaster(neopleOpenApiClient).ConfigureAwait(false);
             await GenerateSkillMaster(neopleOpenApiClient, dnfOfficialWebSiteClient).ConfigureAwait(false);
 
-            // DB.Instance.Insert(JsonConvert.DeserializeObject<Core.Master.Model.Skill[]>(File.ReadAllText($"{MasterDirectoryName}/skills.json")));
+            DB.Instance.Insert(JsonConvert.DeserializeObject<Core.Master.Model.Skill[]>(File.ReadAllText($"{MasterDirectoryName}/skills.json")));
         }
     }
 }
