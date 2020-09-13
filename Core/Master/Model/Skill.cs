@@ -1,6 +1,6 @@
-namespace AradMasterGenerator.Master.Model
+namespace Core.Master.Model
 {
-    class Skill
+    public class Skill
     {
         public string Id { get; set; } = default!;
 

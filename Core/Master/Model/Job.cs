@@ -1,6 +1,6 @@
-namespace AradMasterGenerator.Master.Model
+namespace Core.Master.Model
 {
-    class Job
+    public class Job
     {
         public string Id { get; set; } = default!;
         public string GrowId { get; set; } = default!;

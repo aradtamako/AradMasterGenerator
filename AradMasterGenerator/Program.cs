@@ -23,12 +23,12 @@ namespace AradMasterGenerator
 
         static async Task GenerateJobMaster(NeopleOpenApiClient client)
         {
-            var jobs = new List<Master.Model.Job>();
+            var jobs = new List<Core.Master.Model.Job>();
             foreach (var job in (await client.GetJobList().ConfigureAwait(false)).Jobs)
             {
                 foreach (var jobGrow in job.JobGrows ?? default!)
                 {
-                    jobs.Add(new Master.Model.Job
+                    jobs.Add(new Core.Master.Model.Job
                     {
                         Id = job.JobId,
                         GrowId = jobGrow.JobGrowId,
@@ -43,14 +43,14 @@ namespace AradMasterGenerator
 
         static async Task GenerateSkillMaster(NeopleOpenApiClient client)
         {
-            var skills = new List<Master.Model.Skill>();
+            var skills = new List<Core.Master.Model.Skill>();
             foreach (var job in (await client.GetJobList().ConfigureAwait(false)).Jobs)
             {
                 foreach (var jobGrow in job.JobGrows ?? default!)
                 {
                     foreach (var skill in (await client.GetSkillList(job.JobId, jobGrow.JobGrowId).ConfigureAwait(false)).Skills)
                     {
-                        skills.Add(new Master.Model.Skill
+                        skills.Add(new Core.Master.Model.Skill
                         {
                             Id = skill.SkillId,
                             JobId = job.JobId,
