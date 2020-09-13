@@ -58,9 +58,7 @@ namespace AradMasterGenerator
         static async Task GenerateSkillMaster(NeopleOpenApiClient neopleOpenApiClient, DnfOfficialWebSiteClient dnfOfficialWebSiteClient)
         {
             var skills = new List<Core.Master.Model.Skill>();
-            //var skillIcons = await dnfOfficialWebSiteClient.GetSkillIcons();
-            //File.WriteAllText("lfkjdlkfdjs.json", JsonConvert.SerializeObject(skillIcons));
-            var skillIcons = JsonConvert.DeserializeObject<Core.Master.Model.Skill[]>(File.ReadAllText("lfkjdlkfdjs.json"));
+            var skillIcons = await dnfOfficialWebSiteClient.GetSkillIcons();
 
             // 全職業共通スキル
             var commonSkills = new List<Core.Master.Model.Skill>
