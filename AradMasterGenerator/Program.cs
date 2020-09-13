@@ -31,15 +31,24 @@ namespace AradMasterGenerator
             var jobs = new List<Core.Master.Model.Job>();
             foreach (var job in await neopleOpenApiClient.GetJobs().ConfigureAwait(false))
             {
+                jobs.Add(new Core.Master.Model.Job
+                {
+                    Id = job.JobId,
+                    NameKor = job.JobName
+                });
+
                 foreach (var jobGrow in job.JobGrows ?? default!)
                 {
-                    jobs.Add(new Core.Master.Model.Job
+                    for (var nextJobGrow = jobGrow; nextJobGrow != null; nextJobGrow = nextJobGrow.Next)
                     {
-                        Id = job.JobId,
-                        GrowId = jobGrow.JobGrowId,
-                        NameKor = job.JobName,
-                        GrowNameKor = jobGrow.JobName
-                    });
+                        jobs.Add(new Core.Master.Model.Job
+                        {
+                            Id = job.JobId,
+                            GrowId = nextJobGrow.JobGrowId,
+                            NameKor = job.JobName,
+                            GrowNameKor = nextJobGrow.JobName
+                        });
+                    }
                 }
             }
 
@@ -55,26 +64,29 @@ namespace AradMasterGenerator
             {
                 foreach (var jobGrow in job.JobGrows ?? default!)
                 {
-                    foreach (var skill in await neopleOpenApiClient.GetSkills(job.JobId, jobGrow.JobGrowId).ConfigureAwait(false))
+                    for (var nextJobGrow = jobGrow; nextJobGrow != null; nextJobGrow = nextJobGrow.Next)
                     {
-                        var skillIcon = skillIcons.Where(x => x.NameKor.Replace(" ", "") == skill.Name.Replace(" ", "")).FirstOrDefault();
-
-                        if (skillIcon == null)
+                        foreach (var skill in await neopleOpenApiClient.GetSkills(job.JobId, jobGrow.JobGrowId).ConfigureAwait(false))
                         {
-                            throw new InvalidDataException();
+                            var skillIcon = skillIcons.Where(x => x.NameKor.Replace(" ", "") == skill.Name.Replace(" ", "")).FirstOrDefault();
+
+                            if (skillIcon == null)
+                            {
+                                throw new InvalidDataException();
+                            }
+
+                            skills.Add(new Core.Master.Model.Skill
+                            {
+                                Id = skill.SkillId,
+                                JobId = job.JobId,
+                                JobGrowId = jobGrow.JobGrowId,
+                                RequiredLevel = skill.RequiredLevel,
+                                Type = skill.Type,
+                                CostType = skill.CostType,
+                                NameKor = skill.Name,
+                                IconUrl = skillIcon.IconUrl
+                            });
                         }
-
-                        skills.Add(new Core.Master.Model.Skill
-                        {
-                            Id = skill.SkillId,
-                            JobId = job.JobId,
-                            JobGrowId = jobGrow.JobGrowId,
-                            RequiredLevel = skill.RequiredLevel,
-                            Type = skill.Type,
-                            CostType = skill.CostType,
-                            NameKor = skill.Name,
-                            IconUrl = skillIcon.IconUrl
-                        });
                     }
                 }
             }
