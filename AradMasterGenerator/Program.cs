@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 using System;
 using System.Threading.Tasks;
 
-namespace AradSkillMasterGenerator
+namespace AradMasterGenerator
 {
     class Program
     {
