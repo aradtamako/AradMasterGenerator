@@ -15,5 +15,7 @@ namespace Core.Master.Model
         public string? NameEng { get; set; }
         public string? NameJpn { get; set; }
         public string? NameZho { get; set; }
+
+        public string? IconUrl { get; set; }
     }
 }

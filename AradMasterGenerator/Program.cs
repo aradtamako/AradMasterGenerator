@@ -1,10 +1,14 @@
 using Core.Config;
+using Core.DnfOfficialWebSite;
+using Core.Master.Model;
 using Core.NeopleOpenApi;
 using Core.NeopleOpenApi.Model;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace AradMasterGenerator
@@ -21,10 +25,10 @@ namespace AradMasterGenerator
             }
         }
 
-        static async Task GenerateJobMaster(NeopleOpenApiClient client)
+        static async Task GenerateJobMaster(NeopleOpenApiClient neopleOpenApiClient)
         {
             var jobs = new List<Core.Master.Model.Job>();
-            foreach (var job in await client.GetJobs().ConfigureAwait(false))
+            foreach (var job in await neopleOpenApiClient.GetJobs().ConfigureAwait(false))
             {
                 foreach (var jobGrow in job.JobGrows ?? default!)
                 {
@@ -41,15 +45,24 @@ namespace AradMasterGenerator
             File.WriteAllText($"{MasterDirectoryName}/jobs.json", JsonConvert.SerializeObject(jobs, Formatting.Indented));
         }
 
-        static async Task GenerateSkillMaster(NeopleOpenApiClient client)
+        static async Task GenerateSkillMaster(NeopleOpenApiClient neopleOpenApiClient, DnfOfficialWebSiteClient dnfOfficialWebSiteClient)
         {
             var skills = new List<Core.Master.Model.Skill>();
-            foreach (var job in await client.GetJobs().ConfigureAwait(false))
+            var skillIcons = await dnfOfficialWebSiteClient.GetSkillIcons();
+
+            foreach (var job in await neopleOpenApiClient.GetJobs().ConfigureAwait(false))
             {
                 foreach (var jobGrow in job.JobGrows ?? default!)
                 {
-                    foreach (var skill in await client.GetSkills(job.JobId, jobGrow.JobGrowId).ConfigureAwait(false))
+                    foreach (var skill in await neopleOpenApiClient.GetSkills(job.JobId, jobGrow.JobGrowId).ConfigureAwait(false))
                     {
+                        var skillIcon = skillIcons.Where(x => x.NameKor.Replace(" ", "") == skill.Name.Replace(" ", "")).FirstOrDefault();
+
+                        if (skillIcon == null)
+                        {
+                            throw new InvalidDataException();
+                        }
+
                         skills.Add(new Core.Master.Model.Skill
                         {
                             Id = skill.SkillId,
@@ -58,7 +71,8 @@ namespace AradMasterGenerator
                             RequiredLevel = skill.RequiredLevel,
                             Type = skill.Type,
                             CostType = skill.CostType,
-                            NameKor = skill.Name
+                            NameKor = skill.Name,
+                            IconUrl = skillIcon.IconUrl
                         });
                     }
                 }
@@ -69,11 +83,15 @@ namespace AradMasterGenerator
 
         static async Task Main()
         {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
             CreateDirectoryIfNotExists(MasterDirectoryName);
 
-            var client = new NeopleOpenApiClient(Config.Instance.NeopleOpenApi.ApiKeys);
-            await GenerateJobMaster(client).ConfigureAwait(false);
-            await GenerateSkillMaster(client).ConfigureAwait(false);
+            var neopleOpenApiClient = new NeopleOpenApiClient(Config.Instance.NeopleOpenApi.ApiKeys);
+            var dnfOfficialWebSiteClient = new DnfOfficialWebSiteClient();
+
+            await GenerateJobMaster(neopleOpenApiClient).ConfigureAwait(false);
+            await GenerateSkillMaster(neopleOpenApiClient, dnfOfficialWebSiteClient).ConfigureAwait(false);
         }
     }
 }
