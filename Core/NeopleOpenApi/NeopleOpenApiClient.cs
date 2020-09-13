@@ -17,7 +17,7 @@ namespace Core.NeopleOpenApi
     public class NeopleOpenApiClient
     {
         private const string HttpClientName = "NeopleOpenApiClient";
-        private const string NeopleOpenApiBaseAddress = "https://api.neople.co.kr/";
+        private const string NeopleOpenApiBaseAddress = "https://api.neople.co.kr";
 
         private static HttpClient Client { get; set; } = default!;
         private string[] ApiKeys { get; set; }
@@ -69,12 +69,12 @@ namespace Core.NeopleOpenApi
         }
 
         public async Task<Job[]> GetJobs()
-            => (await Get<JobResponse>($"df/jobs?apikey={ApiKey}").ConfigureAwait(false)).Jobs;
+            => (await Get<JobResponse>($"/df/jobs?apikey={ApiKey}").ConfigureAwait(false)).Jobs;
 
         public async Task<Skill[]> GetSkills(string jobId, string jobGrowId)
-            => (await Get<SkillResponse>($"df/skills/{jobId}?jobGrowId={jobGrowId}&apikey={ApiKey}").ConfigureAwait(false)).Skills;
+            => (await Get<SkillResponse>($"/df/skills/{jobId}?jobGrowId={jobGrowId}&apikey={ApiKey}").ConfigureAwait(false)).Skills;
 
         public async Task<SkillDetail> GetSkillDetail(string jobId, string skillId)
-            => await Get<SkillDetail>($"df/skills/{jobId}/{skillId}?&apikey={ApiKey}").ConfigureAwait(false);
+            => await Get<SkillDetail>($"/df/skills/{jobId}/{skillId}?&apikey={ApiKey}").ConfigureAwait(false);
     }
 }
