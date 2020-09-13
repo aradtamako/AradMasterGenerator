@@ -170,7 +170,7 @@ namespace AradMasterGenerator
                 }
                 filePath.Append($"{skill.Id}.{Path.GetExtension(skill.IconUrl)}");
 
-                skill.IconPath = filePath.ToString();
+                skill.IconPath = $"/{filePath}";
 
                 DownloadSkillIcon(client, skill.IconUrl ?? default!, filePath.ToString()).ConfigureAwait(false).GetAwaiter().GetResult();
             });
