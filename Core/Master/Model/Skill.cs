@@ -35,7 +35,10 @@ namespace Core.Master.Model
         [Column("name_zho")]
         public string? NameZho { get; set; }
 
-        [Column("icon_url")]
+        [NotMapped]
         public string? IconUrl { get; set; }
+
+        [Column("icon_path")]
+        public string? IconPath { get; set; }
     }
 }
