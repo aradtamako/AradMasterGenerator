@@ -24,7 +24,7 @@ namespace AradMasterGenerator
         static async Task GenerateJobMaster(NeopleOpenApiClient client)
         {
             var jobs = new List<Core.Master.Model.Job>();
-            foreach (var job in (await client.GetJobList().ConfigureAwait(false)).Jobs)
+            foreach (var job in await client.GetJobs().ConfigureAwait(false))
             {
                 foreach (var jobGrow in job.JobGrows ?? default!)
                 {
@@ -44,11 +44,11 @@ namespace AradMasterGenerator
         static async Task GenerateSkillMaster(NeopleOpenApiClient client)
         {
             var skills = new List<Core.Master.Model.Skill>();
-            foreach (var job in (await client.GetJobList().ConfigureAwait(false)).Jobs)
+            foreach (var job in await client.GetJobs().ConfigureAwait(false))
             {
                 foreach (var jobGrow in job.JobGrows ?? default!)
                 {
-                    foreach (var skill in (await client.GetSkillList(job.JobId, jobGrow.JobGrowId).ConfigureAwait(false)).Skills)
+                    foreach (var skill in await client.GetSkills(job.JobId, jobGrow.JobGrowId).ConfigureAwait(false))
                     {
                         skills.Add(new Core.Master.Model.Skill
                         {

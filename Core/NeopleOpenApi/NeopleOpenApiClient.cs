@@ -68,11 +68,11 @@ namespace Core.NeopleOpenApi
             return serializer.Deserialize<T>(jsonTextReader) ?? throw new InvalidDataException();
         }
 
-        public async Task<JobResponse> GetJobList()
-            => await Get<JobResponse>($"df/jobs?apikey={ApiKey}").ConfigureAwait(false);
+        public async Task<Job[]> GetJobs()
+            => (await Get<JobResponse>($"df/jobs?apikey={ApiKey}").ConfigureAwait(false)).Jobs;
 
-        public async Task<SkillResponse> GetSkillList(string jobId, string jobGrowId)
-            => await Get<SkillResponse>($"df/skills/{jobId}?jobGrowId={jobGrowId}&apikey={ApiKey}").ConfigureAwait(false);
+        public async Task<Skill[]> GetSkills(string jobId, string jobGrowId)
+            => (await Get<SkillResponse>($"df/skills/{jobId}?jobGrowId={jobGrowId}&apikey={ApiKey}").ConfigureAwait(false)).Skills;
 
         public async Task<SkillDetail> GetSkillDetail(string jobId, string skillId)
             => await Get<SkillDetail>($"df/skills/{jobId}/{skillId}?&apikey={ApiKey}").ConfigureAwait(false);
