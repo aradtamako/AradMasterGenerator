@@ -1,1 +1,1 @@
-# AradSkillMasterGenerator
+# AradMasterGenerator
