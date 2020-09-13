@@ -1,0 +1,10 @@
+{
+  "neople_open_api": {
+    "api_key": ""
+  },
+  "proxy": {
+    "host": "127.0.0.1",
+    "port": 8008,
+    "enabled": false
+  }
+}
