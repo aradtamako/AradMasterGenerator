@@ -11,7 +11,7 @@ namespace Core.NeopleOpenApi.Model
         public string Name { get; set; } = default!;
 
         [JsonProperty("requiredLevel")]
-        public int RequiredLevel { get; set; } = default!;
+        public int RequiredLevel { get; set; }
 
         [JsonProperty("type")]
         public string Type { get; set; } = default!;
