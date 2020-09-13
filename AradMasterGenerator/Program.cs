@@ -11,6 +11,16 @@ namespace AradMasterGenerator
 {
     class Program
     {
+        const string MasterDirectoryName = "master";
+
+        static void CreateDirectoryIfNotExists(string path)
+        {
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
+        }
+
         static async Task GenerateJobMaster(NeopleOpenApiClient client)
         {
             var jobs = new List<Master.Model.Job>();
@@ -28,25 +38,42 @@ namespace AradMasterGenerator
                 }
             }
 
-            File.WriteAllText("job_master.json", JsonConvert.SerializeObject(jobs, Formatting.Indented));
+            File.WriteAllText($"{MasterDirectoryName}/jobs.json", JsonConvert.SerializeObject(jobs, Formatting.Indented));
+        }
+
+        static async Task GenerateSkillMaster(NeopleOpenApiClient client)
+        {
+            var skills = new List<Master.Model.Skill>();
+            foreach (var job in (await client.GetJobList().ConfigureAwait(false)).Jobs)
+            {
+                foreach (var jobGrow in job.JobGrows ?? default!)
+                {
+                    foreach (var skill in (await client.GetSkillList(job.JobId, jobGrow.JobGrowId).ConfigureAwait(false)).Skills)
+                    {
+                        skills.Add(new Master.Model.Skill
+                        {
+                            Id = skill.SkillId,
+                            JobId = job.JobId,
+                            JobGrowId = jobGrow.JobGrowId,
+                            RequiredLevel = skill.RequiredLevel,
+                            Type = skill.Type,
+                            CostType = skill.CostType,
+                            NameKor = skill.Name
+                        });
+                    }
+                }
+            }
+
+            File.WriteAllText($"{MasterDirectoryName}/skills.json", JsonConvert.SerializeObject(skills, Formatting.Indented));
         }
 
         static async Task Main()
         {
+            CreateDirectoryIfNotExists(MasterDirectoryName);
+
             var client = new NeopleOpenApiClient(Config.Instance.NeopleOpenApi.ApiKeys);
             await GenerateJobMaster(client).ConfigureAwait(false);
-            return;
-
-            var jobId = "41f1cdc2ff58bb5fdc287be0db2a8df3";
-            var jobGrowId = "df3870efe8e8754011cd12fa03cd275f";
-            var skills = (await client.GetSkillList(jobId, jobGrowId).ConfigureAwait(false)).Skills;
-            Console.WriteLine(JsonConvert.SerializeObject(skills));
-
-            foreach (var skill in skills)
-            {
-                var skillDetail = await client.GetSkillDetail(jobId, skill.SkillId).ConfigureAwait(false);
-                Console.WriteLine(JsonConvert.SerializeObject(skillDetail));
-            }
+            await GenerateSkillMaster(client).ConfigureAwait(false);
         }
     }
 }
