@@ -4,7 +4,10 @@ using Newtonsoft.Json;
 using Polly;
 using Polly.Extensions.Http;
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -17,11 +20,19 @@ namespace Core.NeopleOpenApi
         private const string NeopleOpenApiBaseAddress = "https://api.neople.co.kr/";
 
         private static HttpClient Client { get; set; } = default!;
-        private string ApiKey { get; set; }
-
-        public NeopleOpenApiClient(string apiKey)
+        private string[] ApiKeys { get; set; }
+        private string ApiKey
         {
-            ApiKey = apiKey;
+            get
+            {
+                int index = new Random((int)DateTime.Now.Ticks).Next(0, ApiKeys.Length);
+                return ApiKeys[index];
+            }
+        }
+
+        public NeopleOpenApiClient(IEnumerable<string> apiKeys)
+        {
+            ApiKeys = apiKeys.ToArray();
 
             var policy = HttpPolicyExtensions
                 .HandleTransientHttpError()

@@ -1,6 +1,6 @@
 {
   "neople_open_api": {
-    "api_key": ""
+    "api_keys": [ "" ]
   },
   "proxy": {
     "host": "127.0.0.1",

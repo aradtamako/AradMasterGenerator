@@ -33,7 +33,7 @@ namespace AradMasterGenerator
 
         static async Task Main()
         {
-            var client = new NeopleOpenApiClient(Config.Instance.NeopleOpenApi.ApiKey);
+            var client = new NeopleOpenApiClient(Config.Instance.NeopleOpenApi.ApiKeys);
             await GenerateJobMaster(client).ConfigureAwait(false);
             return;
 

@@ -4,7 +4,7 @@ namespace Core.Config.Model
 {
     public class NeopleOpenApi
     {
-        [JsonProperty("api_key")]
-        public string ApiKey { get; set; } = default!;
+        [JsonProperty("api_keys")]
+        public string[] ApiKeys { get; set; } = default!;
     }
 }
