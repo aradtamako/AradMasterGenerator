@@ -38,12 +38,16 @@ namespace AradMasterGenerator
 
                 foreach (var jobGrow in job.JobGrows ?? default!)
                 {
+                    var baseGrowId = jobGrow.JobGrowId;
+                    var growCount = 1;
                     for (var nextJobGrow = jobGrow; nextJobGrow != null; nextJobGrow = nextJobGrow.Next)
                     {
                         jobs.Add(new Core.Master.Model.Job
                         {
                             Id = job.JobId,
+                            BaseGrowId = baseGrowId,
                             GrowId = nextJobGrow.JobGrowId,
+                            GrowCount = growCount++,
                             NameKor = job.JobName,
                             GrowNameKor = nextJobGrow.JobName
                         });
@@ -52,6 +56,13 @@ namespace AradMasterGenerator
             }
 
             File.WriteAllText($"{MasterDirectoryName}/jobs.json", JsonConvert.SerializeObject(jobs, Formatting.Indented));
+
+            var dbJobIds = DB.Instance.Query<Core.Master.Model.Job>("select * from jobs").Select(x => $"{x.Id}{x.GrowId}");
+            var diffJobs = jobs.Where(x => !dbJobIds.Contains($"{x.Id}{x.GrowId}"));
+            if (diffJobs.Any())
+            {
+                DB.Instance.Insert(diffJobs);
+            }
         }
 
         static async Task DownloadSkillIcon(HttpClient client, string url, string filePath)

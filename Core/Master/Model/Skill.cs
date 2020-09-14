@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Core.Master.Model
 {
     [Table("skills")]
-    public class Skill
+    public class Skill : IDataModel
     {
         [Column("id")]
         public string Id { get; set; } = default!;
