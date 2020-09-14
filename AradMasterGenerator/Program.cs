@@ -3,11 +3,14 @@ using Core.Config;
 using Core.DnfOfficialWebSite;
 using Core.NeopleOpenApi;
 using Newtonsoft.Json;
+using PuppeteerSharp;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AradMasterGenerator
@@ -16,6 +19,7 @@ namespace AradMasterGenerator
     {
         const string MasterDirectoryName = "master";
         const string SkillImageDirectoryName = "image/skill";
+        const string JobImageDirectoryName = "image/job";
 
         static void CreateDirectoryIfNotExists(string path)
         {
@@ -72,7 +76,7 @@ namespace AradMasterGenerator
                 CreateDirectoryIfNotExists(Path.GetDirectoryName(filePath) ?? default!);
 
                 using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
-                using var stream = await response.Content.ReadAsStreamAsync();
+                using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
                 using var fs = File.OpenWrite(filePath);
                 stream.CopyTo(fs);
             }
@@ -185,6 +189,61 @@ namespace AradMasterGenerator
             File.WriteAllText($"{MasterDirectoryName}/skills.json", JsonConvert.SerializeObject(skills, Formatting.Indented));
         }
 
+        static async Task DownloadJobIcon()
+        {
+            var jobs = DB.Instance.Query<Core.Master.Model.Job>("select * from jobs").ToArray();
+
+            await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultRevision).ConfigureAwait(false);
+            var browser = await Puppeteer.LaunchAsync(new LaunchOptions
+            {
+                Headless = false
+            }).ConfigureAwait(false);
+            var page = await browser.NewPageAsync().ConfigureAwait(false);
+            await page.SetViewportAsync(new ViewPortOptions
+            {
+                Width = 1920,
+                Height = 1080
+            }).ConfigureAwait(false);
+            await page.GoToAsync("http://df.nexon.com/df/pg/character/srch").ConfigureAwait(false);
+            var elements = await page.XPathAsync("//div[contains(@class, \"mix\")]").ConfigureAwait(false);
+
+            foreach (var element in elements)
+            {
+                await element.EvaluateFunctionAsync("x => x.scrollIntoView()").ConfigureAwait(false);
+
+                var jobNameKorElement = (await element.XPathAsync("a/div/p/strong").ConfigureAwait(false)).FirstOrDefault();
+                var jobNameKor = (jobNameKorElement != null)
+                    ? await jobNameKorElement.EvaluateFunctionAsync<string>("x => x.innerText").ConfigureAwait(false)
+                    : string.Empty;
+                var hasSex = (jobNameKor.Contains("(남)") || jobNameKor.Contains("(여)"));
+                var sex = jobNameKor.Contains("(남)") ? "m" : "f";
+                jobNameKor = jobNameKor.Replace("(남)", "").Replace("(여)", "").Replace(" ", "");
+
+                var titleElement = (await element.XPathAsync("a/div/p").ConfigureAwait(false)).FirstOrDefault();
+                if (titleElement != null)
+                {
+                    var jobQuery = jobs.Where(x => x.GrowNameKor?.Replace(" ", "") == jobNameKor || x.NameKor.Replace(" ", "") == jobNameKor);
+                    if (hasSex)
+                    {
+                        jobQuery = jobQuery.Where(x => x.sex == sex);
+                    }
+                    var job = jobQuery.FirstOrDefault();
+
+                    if (job == null)
+                    {
+                        continue;
+                    }
+
+                    await titleElement.EvaluateFunctionAsync("x => x.remove()").ConfigureAwait(false);
+                    var path = $"{JobImageDirectoryName}/{job.Id}/{job.BaseGrowId ?? "0"}.png";
+                    CreateDirectoryIfNotExists(Path.GetDirectoryName(path) ?? default!);
+                    await element.ScreenshotAsync(path, new ScreenshotOptions { BurstMode = true }).ConfigureAwait(false);
+                }
+            }
+
+            await browser.CloseAsync().ConfigureAwait(false);
+        }
+
         static async Task Main()
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -194,10 +253,11 @@ namespace AradMasterGenerator
             var neopleOpenApiClient = new NeopleOpenApiClient(Config.Instance.NeopleOpenApi.ApiKeys);
             var dnfOfficialWebSiteClient = new DnfOfficialWebSiteClient();
 
-            await GenerateJobMaster(neopleOpenApiClient).ConfigureAwait(false);
-            await GenerateSkillMaster(neopleOpenApiClient, dnfOfficialWebSiteClient).ConfigureAwait(false);
+            // await GenerateJobMaster(neopleOpenApiClient).ConfigureAwait(false);
+            await DownloadJobIcon();
 
-            DB.Instance.Insert(JsonConvert.DeserializeObject<Core.Master.Model.Skill[]>(File.ReadAllText($"{MasterDirectoryName}/skills.json")));
+            // await GenerateSkillMaster(neopleOpenApiClient, dnfOfficialWebSiteClient).ConfigureAwait(false);
+            // DB.Instance.Insert(JsonConvert.DeserializeObject<Core.Master.Model.Skill[]>(File.ReadAllText($"{MasterDirectoryName}/skills.json")));
         }
     }
 }

@@ -8,7 +8,7 @@ namespace Core.Master.Model
         [Column("id")]
         public string Id { get; set; } = default!;
 
-        [Column("base_grow_Id")]
+        [Column("base_grow_id")]
         public string? BaseGrowId { get; set; }
 
         [Column("grow_id")]
@@ -25,6 +25,9 @@ namespace Core.Master.Model
 
         [Column("damage_type")]
         public string DamageType { get; set; } = default!;
+
+        [Column("sex")]
+        public string sex { get; set; } = default!;
 
         [Column("name_kor")]
         public string NameKor { get; set; } = default!;
