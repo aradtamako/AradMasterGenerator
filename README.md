@@ -11,3 +11,7 @@
 ### Requirements
 - [.NET Core 3.1](https://dot.net)
 - [Neople API key](https://developers.neople.co.kr/)
+
+### Special thanks
+- Skill name translation (KOR -> JPN)  
+[@DeliciousLoach](https://twitter.com/DeliciousLoach)
