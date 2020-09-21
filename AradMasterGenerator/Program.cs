@@ -113,15 +113,20 @@ namespace AradMasterGenerator
                 // 投擲マスタリー
                 new Core.Master.Model.Skill { Id = "dummy004", NameKor = "투척 마스터리", RequiredLevel = 10, Type = "passive", CostType = "SP" },
                 // コンバージョン
-                new Core.Master.Model.Skill { Id = "12dca7fbf791e882b025a0d916181673", NameKor = "컨버전", RequiredLevel = 20, Type = "passive", CostType = "SP" },
-                // ホウキコントロール（クリエイター用）
-                new Core.Master.Model.Skill { Id = "5152480fdde81362575a488d4cec4af9", NameKor = "빗자루 다루기", RequiredLevel = 1, Type = "passive", CostType = "SP" },
+                new Core.Master.Model.Skill { Id = "12dca7fbf791e882b025a0d916181673", NameKor = "컨버전", RequiredLevel = 20, Type = "passive", CostType = "SP" }
             };
 
             foreach (var commonSkill in commonSkills)
             {
-                var skillIcon = skillIcons.Where(x => x.NameKor == commonSkill.NameKor).FirstOrDefault();
-                commonSkill.IconUrl = skillIcon.IconUrl;
+                var skillIcon = skillIcons.Where(x => x.Skill.NameKor == commonSkill.NameKor).FirstOrDefault();
+                if (skillIcon == default)
+                {
+                    System.Console.WriteLine(JsonConvert.SerializeObject(commonSkill, new JsonSerializerSettings { StringEscapeHandling = StringEscapeHandling.EscapeNonAscii }));
+                    continue;
+                    // throw new InvalidDataException();
+                }
+
+                commonSkill.IconUrl = skillIcon.Skill.IconUrl;
                 skills.Add(commonSkill);
             }
 
@@ -129,15 +134,36 @@ namespace AradMasterGenerator
             {
                 foreach (var jobGrow in job.JobGrows ?? default!)
                 {
+                    var baseGrowId = jobGrow.JobGrowId;
                     for (var nextJobGrow = jobGrow; nextJobGrow != null; nextJobGrow = nextJobGrow.Next)
                     {
                         foreach (var skill in await neopleOpenApiClient.GetSkills(job.JobId, nextJobGrow.JobGrowId).ConfigureAwait(false))
                         {
-                            var skillIcon = skillIcons.Where(x => x.NameKor.Replace(" ", "") == skill.Name.Replace(" ", "")).FirstOrDefault();
+                            var skillIcon = skillIcons
+                                .Where(x => x.Skill.NameKor.Replace(" ", "") == skill.Name.Replace(" ", ""))
+                                .Where(x => x.JobId == job.JobId)
+                                .Where(x => x.BaseGrowId == baseGrowId)
+                                .FirstOrDefault();
 
-                            if (skillIcon == null)
+                            if (skillIcon == default)
                             {
-                                throw new InvalidDataException();
+                                // 一部スキル（「刹那の悟り」など）はWebページから削除されているので職業IDを無視して検索する
+                                skillIcon = skillIcons
+                                    .Where(x => x.Skill.NameKor.Replace(" ", "") == skill.Name.Replace(" ", ""))
+                                    .FirstOrDefault();
+
+                                if (skillIcon == default)
+                                {
+                                    System.Console.WriteLine(JsonConvert.SerializeObject(skill, new JsonSerializerSettings { StringEscapeHandling = StringEscapeHandling.EscapeNonAscii }));
+                                    continue;
+                                    // throw new InvalidDataException();
+                                }
+                            }
+
+                            // 一部スキルアイコンは公式サイト側が間違っているので修正する
+                            if (skillIcon.Skill.IconUrl == "http://d-fighter.dn.nexoncdn.co.kr/samsungdnf/neople/swf/2019/skill/7/icon/188.png")
+                            {
+                                skillIcon.Skill.IconUrl = "https://i.imgur.com/QndDlzz.png";
                             }
 
                             skills.Add(new Core.Master.Model.Skill
@@ -149,24 +175,34 @@ namespace AradMasterGenerator
                                 Type = skill.Type,
                                 CostType = skill.CostType,
                                 NameKor = skill.Name,
-                                IconUrl = skillIcon.IconUrl
+                                IconUrl = skillIcon.Skill.IconUrl
                             });
                         }
                     }
                 }
             }
 
+            // i18n対応
+            foreach (var stringTableFilePath in new string[] { "Resources/string_table/skill/kor_jpn.csv" })
+            {
+                Util.LoadStringTable(stringTableFilePath);
+                foreach (var skill in skills)
+                {
+                    var str = Util.GetString(skill.NameKor)?.Trim();
+                    if (!string.IsNullOrEmpty(str))
+                    {
+                        skill.NameJpn = str;
+                    }
+                }
+            }
+
+            // スキルアイコンをダウンロードする
             var client = new HttpClient();
             Parallel.ForEach(skills, new ParallelOptions { MaxDegreeOfParallelism = 10 }, skill =>
             {
                 if (string.IsNullOrWhiteSpace(skill.IconUrl))
                 {
                     return;
-                }
-
-                if(skill.IconUrl.StartsWith("//"))
-                {
-                    skill.IconUrl = $"http:{skill.IconUrl}";
                 }
 
                 var filePath = new StringBuilder();
@@ -187,6 +223,8 @@ namespace AradMasterGenerator
             });
 
             File.WriteAllText($"{MasterDirectoryName}/skills.json", JsonConvert.SerializeObject(skills, Formatting.Indented));
+            DB.Instance.ExecuteSQL("truncate table skills");
+            DB.Instance.Insert(skills);
         }
 
         static async Task DownloadJobIcon()
@@ -254,10 +292,9 @@ namespace AradMasterGenerator
             var dnfOfficialWebSiteClient = new DnfOfficialWebSiteClient();
 
             // await GenerateJobMaster(neopleOpenApiClient).ConfigureAwait(false);
-            await DownloadJobIcon();
+            // await DownloadJobIcon();
 
-            // await GenerateSkillMaster(neopleOpenApiClient, dnfOfficialWebSiteClient).ConfigureAwait(false);
-            // DB.Instance.Insert(JsonConvert.DeserializeObject<Core.Master.Model.Skill[]>(File.ReadAllText($"{MasterDirectoryName}/skills.json")));
+            await GenerateSkillMaster(neopleOpenApiClient, dnfOfficialWebSiteClient).ConfigureAwait(false);
         }
     }
 }
