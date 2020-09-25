@@ -4,6 +4,7 @@ using Core.DnfOfficialWebSite;
 using Core.NeopleOpenApi;
 using Newtonsoft.Json;
 using PuppeteerSharp;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -17,6 +18,7 @@ namespace AradMasterGenerator
 {
     class Program
     {
+        const string StringTableDirectoryName = "Resources/string_table";
         const string MasterDirectoryName = "master";
         const string SkillImageDirectoryName = "image/skill";
         const string JobImageDirectoryName = "image/job";
@@ -121,7 +123,7 @@ namespace AradMasterGenerator
                 var skillIcon = skillIcons.Where(x => x.Skill.NameKor == commonSkill.NameKor).FirstOrDefault();
                 if (skillIcon == default)
                 {
-                    System.Console.WriteLine(JsonConvert.SerializeObject(commonSkill, new JsonSerializerSettings { StringEscapeHandling = StringEscapeHandling.EscapeNonAscii }));
+                    Console.WriteLine(JsonConvert.SerializeObject(commonSkill, new JsonSerializerSettings { StringEscapeHandling = StringEscapeHandling.EscapeNonAscii }));
                     continue;
                     // throw new InvalidDataException();
                 }
@@ -154,7 +156,7 @@ namespace AradMasterGenerator
 
                                 if (skillIcon == default)
                                 {
-                                    System.Console.WriteLine(JsonConvert.SerializeObject(skill, new JsonSerializerSettings { StringEscapeHandling = StringEscapeHandling.EscapeNonAscii }));
+                                    Console.WriteLine(JsonConvert.SerializeObject(skill, new JsonSerializerSettings { StringEscapeHandling = StringEscapeHandling.EscapeNonAscii }));
                                     continue;
                                     // throw new InvalidDataException();
                                 }
@@ -183,15 +185,23 @@ namespace AradMasterGenerator
             }
 
             // i18n対応
-            foreach (var stringTableFilePath in new string[] { "Resources/string_table/skill/kor_jpn.csv" })
+            var skillStringTableDirectoryName = $"{StringTableDirectoryName}/skill";
+            foreach (var fileName in new string[] { "kor_jpn.csv", "kor_eng.csv" })
             {
-                Util.LoadStringTable(stringTableFilePath);
+                Util.LoadStringTable($"{skillStringTableDirectoryName}/{fileName}");
                 foreach (var skill in skills)
                 {
                     var str = Util.GetString(skill.NameKor)?.Trim();
                     if (!string.IsNullOrEmpty(str))
                     {
-                        skill.NameJpn = str;
+                        if (fileName.Contains("jpn"))
+                        {
+                            skill.NameJpn = str;
+                        }
+                        else if (fileName.Contains("eng"))
+                        {
+                            skill.NameEng = str;
+                        }
                     }
                 }
             }
