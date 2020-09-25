@@ -24,7 +24,7 @@ namespace Core
             }
             else
             {
-                throw new KeyNotFoundException($"{key} not found");
+                return default;
             }
         }
     }

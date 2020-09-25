@@ -105,9 +105,9 @@ namespace AradMasterGenerator
                 // 魔法クリティカルヒット
                 new Core.Master.Model.Skill { Id = "fc1262c19f3d0477ee8eda47b8db8696", NameKor = "마법 크리티컬 히트", RequiredLevel = 20, Type = "passive", CostType = "SP" },
                 // 物理バックアタック
-                new Core.Master.Model.Skill { Id = "dummy001", NameKor = "물리 백 어택", RequiredLevel = 20, Type = "passive", CostType = "SP" },
+                new Core.Master.Model.Skill { Id = "8a3b4a6cea49837706c36da3d9904f95", NameKor = "물리 백 어택", RequiredLevel = 20, Type = "passive", CostType = "SP" },
                 // 魔法バックアタック
-                new Core.Master.Model.Skill { Id = "dummy002", NameKor = "마법 백 어택", RequiredLevel = 20, Type = "passive", CostType = "SP" },
+                new Core.Master.Model.Skill { Id = "8a3b4a6cea49837706c36da3d9904f95", NameKor = "마법 백 어택", RequiredLevel = 20, Type = "passive", CostType = "SP" },
                 // 古代の記憶
                 new Core.Master.Model.Skill { Id = "de13113fc6cb4c8880e8d985edb34aea", NameKor = "고대의 기억", RequiredLevel = 15, Type = "active", CostType = "SP" },
                 // 不屈の意志
@@ -156,14 +156,14 @@ namespace AradMasterGenerator
 
                                 if (skillIcon == default)
                                 {
+                                    // アイコンが見つからなかった
                                     Console.WriteLine(JsonConvert.SerializeObject(skill, new JsonSerializerSettings { StringEscapeHandling = StringEscapeHandling.EscapeNonAscii }));
-                                    continue;
                                     // throw new InvalidDataException();
                                 }
                             }
 
                             // 一部スキルアイコンは公式サイト側が間違っているので修正する
-                            if (skillIcon.Skill.IconUrl == "http://d-fighter.dn.nexoncdn.co.kr/samsungdnf/neople/swf/2019/skill/7/icon/188.png")
+                            if (skillIcon.Skill?.IconUrl == "http://d-fighter.dn.nexoncdn.co.kr/samsungdnf/neople/swf/2019/skill/7/icon/188.png")
                             {
                                 skillIcon.Skill.IconUrl = "https://i.imgur.com/QndDlzz.png";
                             }
@@ -177,7 +177,7 @@ namespace AradMasterGenerator
                                 Type = skill.Type,
                                 CostType = skill.CostType,
                                 NameKor = skill.Name,
-                                IconUrl = skillIcon.Skill.IconUrl
+                                IconUrl = skillIcon.Skill?.IconUrl ?? null
                             });
                         }
                     }
@@ -210,11 +210,6 @@ namespace AradMasterGenerator
             var client = new HttpClient();
             Parallel.ForEach(skills, new ParallelOptions { MaxDegreeOfParallelism = 10 }, skill =>
             {
-                if (string.IsNullOrWhiteSpace(skill.IconUrl))
-                {
-                    return;
-                }
-
                 var filePath = new StringBuilder();
                 filePath.Append($"{SkillImageDirectoryName}/");
                 if (!string.IsNullOrEmpty(skill.JobId))
@@ -225,9 +220,14 @@ namespace AradMasterGenerator
                 {
                     filePath.Append($"{skill.JobGrowId}/");
                 }
-                filePath.Append($"{skill.Id}{Path.GetExtension(skill.IconUrl)}");
+                filePath.Append($"{skill.Id}{Path.GetExtension(skill.IconUrl ?? ".png")}");
 
                 skill.IconPath = $"/{filePath}";
+
+                if (string.IsNullOrWhiteSpace(skill.IconUrl))
+                {
+                    return;
+                }
 
                 DownloadSkillIcon(client, skill.IconUrl ?? default!, filePath.ToString()).ConfigureAwait(false).GetAwaiter().GetResult();
             });
