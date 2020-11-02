@@ -116,7 +116,7 @@ namespace AradMasterGenerator
 
             foreach (var commonSkill in commonSkills)
             {
-                var skillIcon = skillIcons.Where(x => x.Skill.NameKor == commonSkill.NameKor).FirstOrDefault();
+                var skillIcon = skillIcons.Where(x => x.Skill.NameKor.Replace("물리 ", "") == commonSkill.NameKor).FirstOrDefault();
                 if (skillIcon == default)
                 {
                     Console.WriteLine(JsonConvert.SerializeObject(commonSkill, new JsonSerializerSettings { StringEscapeHandling = StringEscapeHandling.EscapeNonAscii }));
