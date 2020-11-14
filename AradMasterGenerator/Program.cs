@@ -1,17 +1,20 @@
 using Core;
 using Core.Config;
 using Core.DnfOfficialWebSite;
+using Core.Master.Model;
 using Core.NeopleOpenApi;
+using Core.NeopleOpenApi.Model;
+using HtmlAgilityPack;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using PuppeteerSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Reflection;
 using System.Text;
-using System.Threading;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace AradMasterGenerator
@@ -288,8 +291,207 @@ namespace AradMasterGenerator
             await browser.CloseAsync().ConfigureAwait(false);
         }
 
+        static async Task GenerateCardMaster(NeopleOpenApiClient neopleOpenApiClient)
+        {
+            var filePath = $"{MasterDirectoryName}/cards1.json";
+            var reg = new Regex("df/items/(.*$)");
+            var cards = new List<CardDetail>();
+            var client = new HttpClient();
+            var html = new HtmlDocument();
+            CardDetail? cardDetail = null;
+
+            // ファイルが存在する場合は読み込む
+            if (File.Exists(filePath))
+            {
+                cards = JsonConvert.DeserializeObject<CardDetail[]>(File.ReadAllText(filePath)).ToList();
+            }
+
+            html.LoadHtml(await client.GetStringAsync("http://dnfnow.xyz/magic?card_search=%EC%B9%B4%EB%93%9C").ConfigureAwait(false));
+            var nodes = html.DocumentNode.SelectNodes("//table[@id=\"showtables\"]/tr/td/button");
+            foreach (var node in nodes.Select((val, i) => new { val, i }))
+            {
+                Console.WriteLine($"{node.i + 1}/{nodes.Count}");
+
+                var ignoreRarities = new string[] { "커먼", "언커먼" };
+                var rarity = node.val.SelectSingleNode("span").InnerText;
+                if (ignoreRarities.Contains(rarity))
+                {
+                    continue;
+                }
+                var imgSrc = node.val.SelectSingleNode("img").Attributes["src"].Value;
+                var itemId = reg.Match(imgSrc).Groups[1].Value;
+
+                var itemName = node.val.InnerText.Trim();
+                itemName = itemName.Replace("&amp;", "&");
+                itemName = itemName.Substring(0, itemName.IndexOf("카드") + 2);
+
+                cardDetail = await neopleOpenApiClient.GetCardDetail(itemId).ConfigureAwait(false);
+                if (!cards.Where(x => x.ItemId == cardDetail.ItemId).Any())
+                {
+                    cards.Add(cardDetail);
+                }
+            }
+
+            // 任意のカードを追加する
+            /*
+            var ids = new string[]
+            {
+                "8c48f046bdf2bf059befeef5e75c1856",
+                "0de18501dcb2cd1a60462b393a12947d",
+            };
+
+            foreach (var id in ids)
+            {
+                cardDetail = await neopleOpenApiClient.GetCardDetail(id).ConfigureAwait(false);
+                if (!cards.Where(x => x.ItemId == cardDetail.ItemId).Any())
+                {
+                    cards.Add(cardDetail);
+                }
+            }
+            */
+
+            File.WriteAllText(filePath, JsonConvert.SerializeObject(cards, Formatting.Indented));
+        }
+
+        /// <summary>
+        /// Convert to modern style
+        /// </summary>
+        static void ConvertCardMaster()
+        {
+            var cards = JArray.Parse(File.ReadAllText($"{MasterDirectoryName}/cards1.json"));
+            foreach (JObject card in cards)
+            {
+                card["id"] = card["itemId"]!.Value<string>();
+                card.Property("itemId")!.Remove();
+
+                card["name_kor"] = card["itemName"]!.Value<string>();
+                card["name_eng"] = "-";
+                card["name_jpn"] = "-";
+                card["name_zho"] = "-";
+                card.Property("itemName")!.Remove();
+
+                var rarities = new Dictionary<string, int>
+                {
+                    ["레어"] = 0, // Rare
+                    ["유니크"] = 1, // Unique
+                    ["레전더리"] = 2 // Legendary
+                };
+                card["rarity"] = rarities[card["itemRarity"]!.Value<string>()];
+                card.Property("itemRarity")!.Remove();
+
+                // cardInfo
+                var cardSlots = new List<int>();
+                foreach (JObject slot in card["cardInfo"]!["slots"]!)
+                {
+                    // https://i.imgur.com/lJWyK9w.png
+                    var slots = new Dictionary<string, int>
+                    {
+                        ["SHOULDER"] = 0,
+                        ["JACKET"] = 1,
+                        ["PANTS"] = 2,
+                        ["WAIST"] = 3,
+                        ["SHOES"] = 4,
+                        ["WEAPON"] = 5,
+                        ["TITLE"] = 6,
+                        ["WRIST"] = 7,
+                        ["AMULET"] = 8,
+                        ["SUPPORT"] = 9,
+                        ["RING"] = 10,
+                        ["EARRING"] = 11,
+                        ["MAGIC_STON"] = 12,
+                    };
+                    cardSlots.Add(slots[slot["slotId"]!.Value<string>()]);
+                }
+
+                card["card_info"] = new JObject();
+                card["card_info"]!["slots"] = JArray.FromObject(cardSlots);
+                
+                // enchant
+                var statuses = new Dictionary<string, int>
+                {
+                    ["물리 공격력"] = 0,
+                    ["마법 공격력"] = 1,
+                    ["독립 공격력"] = 2,
+                    ["물리 크리티컬 히트"] = 3,
+                    ["마법 크리티컬 히트"] = 4,
+                    ["화속성강화"] = 5,
+                    ["수속성강화"] = 6,
+                    ["명속성강화"] = 7,
+                    ["암속성강화"] = 8,
+                    ["모든 속성 강화"] = 9,
+                    ["힘"] = 10,
+                    ["지능"] = 11,
+                    ["체력"] = 12,
+                    ["정신력"] = 13,
+                    ["공격속도"] = 14,
+                    ["캐스트속도"] = 15,
+                    ["이동속도"] = 16,
+                    ["HP 1분당 회복"] = 17,
+                    ["HP MAX"] = 18,
+                    ["MP 1분당 회복"] = 19,
+                    ["MP MAX"] = 20,
+                    ["공격속성"] = 21,
+                    ["모든 상태변화 내성"] = 22,
+                    ["적중률"] = 23,
+                    ["화속성저항"] = 24,
+                    ["모든 속성 저항"] = 25,
+                    ["회피율"] = 26,
+                    ["히트리커버리"] = 27,
+                    ["점프력"] = 28,
+                };
+                foreach (JObject enchant in card["cardInfo"]!["enchant"]!)
+                {
+                    foreach (JObject status in enchant["status"]!)
+                    {
+                        status["id"] = statuses[status["name"]!.Value<string>()];
+                        status.Property("name")!.Remove();
+
+                        var value = status["value"]!.Value<string>() switch
+                        {
+                            "명" => "LIGHT",
+                            "수" => "WATER",
+                            "암" => "SHADOW",
+                            "화" => "FIRE",
+                            _ => status["value"]!.Value<string>()
+                        };
+                        
+                        status["value"] = value;
+                    }
+                }
+                card["card_info"]!["enchant"] = card["cardInfo"]!["enchant"];
+
+                card.Property("cardInfo")!.Remove();
+            }
+
+            // i18n対応
+            var skillStringTableDirectoryName = $"{StringTableDirectoryName}/card";
+            foreach (var fileName in new string[] { "jpn.csv" })
+            {
+                Util.LoadStringTable($"{skillStringTableDirectoryName}/{fileName}");
+                foreach (var skill in cards)
+                {
+                    var str = Util.GetString(skill["id"]!.Value<string>())?.Trim();
+                    if (!string.IsNullOrEmpty(str))
+                    {
+                        if (fileName.Contains("jpn"))
+                        {
+                            skill["name_jpn"] = str;
+                        }
+                        else if (fileName.Contains("eng"))
+                        {
+                            skill["name_eng"] = str;
+                        }
+                    }
+                }
+            }
+
+            File.WriteAllText($"{MasterDirectoryName}/cards2.json", JsonConvert.SerializeObject(cards));
+            File.WriteAllText($"{MasterDirectoryName}/cards3.csv", string.Join("\n", cards.Select(x => $"{x["id"]!.Value<string>()}\t{x["name_kor"]!.Value<string>()}")));
+        }
+
         static async Task Main()
         {
+            Console.OutputEncoding = Encoding.Unicode;
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
             CreateDirectoryIfNotExists(MasterDirectoryName);
@@ -297,10 +499,11 @@ namespace AradMasterGenerator
             var neopleOpenApiClient = new NeopleOpenApiClient(Config.Instance.NeopleOpenApi.ApiKeys);
             var dnfOfficialWebSiteClient = new DnfOfficialWebSiteClient();
 
-            // await GenerateJobMaster(neopleOpenApiClient).ConfigureAwait(false);
-            // await DownloadJobIcon();
-
-            await GenerateSkillMaster(neopleOpenApiClient, dnfOfficialWebSiteClient).ConfigureAwait(false);
+            //await GenerateJobMaster(neopleOpenApiClient).ConfigureAwait(false);
+            //await DownloadJobIcon();
+            //await GenerateSkillMaster(neopleOpenApiClient, dnfOfficialWebSiteClient).ConfigureAwait(false);
+            await GenerateCardMaster(neopleOpenApiClient);
+            ConvertCardMaster();
         }
     }
 }

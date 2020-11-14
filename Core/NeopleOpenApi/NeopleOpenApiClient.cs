@@ -76,5 +76,8 @@ namespace Core.NeopleOpenApi
 
         public async Task<SkillDetail> GetSkillDetail(string jobId, string skillId)
             => await Get<SkillDetail>($"/df/skills/{jobId}/{skillId}?&apikey={ApiKey}").ConfigureAwait(false);
+
+        public async Task<CardDetail> GetCardDetail(string itemId)
+            => await Get<CardDetail>($"/df/items/{itemId}?&apikey={ApiKey}").ConfigureAwait(false);
     }
 }
