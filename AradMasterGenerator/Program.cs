@@ -306,6 +306,7 @@ namespace AradMasterGenerator
                 cards = JsonConvert.DeserializeObject<CardDetail[]>(File.ReadAllText(filePath)).ToList();
             }
 
+            /*
             html.LoadHtml(await client.GetStringAsync("http://dnfnow.xyz/magic?card_search=%EC%B9%B4%EB%93%9C").ConfigureAwait(false));
             var nodes = html.DocumentNode.SelectNodes("//table[@id=\"showtables\"]/tr/td/button");
             foreach (var node in nodes.Select((val, i) => new { val, i }))
@@ -331,13 +332,12 @@ namespace AradMasterGenerator
                     cards.Add(cardDetail);
                 }
             }
+            */
 
             // 任意のカードを追加する
-            /*
             var ids = new string[]
             {
-                "8c48f046bdf2bf059befeef5e75c1856",
-                "0de18501dcb2cd1a60462b393a12947d",
+                "452db07dd64f94c6158c420232dd4cfd",
             };
 
             foreach (var id in ids)
@@ -348,7 +348,27 @@ namespace AradMasterGenerator
                     cards.Add(cardDetail);
                 }
             }
-            */
+
+            var ignoreCardIds = new string[]
+            {
+                // SD
+                "5251fa9bcd5fbd6e2de23399de10af52",
+                "9c4df3a60e23b0d27ceb866dca37a37e",
+                "a1bee178c334a3715d4bfa7cecaeb532",
+                "def342bd18a63802209c9b5586e27bb2",
+                "06aa9af3a9d9ee0c89749ede88d267ea",
+                "704d4c6097b218a1c488438aff37c123",
+                "50ade12da94d05efab4187337a82991b",
+                "df82565237e2123de54b4e00a183df8b",
+                "49150d2d5ba287c655af0d2ffe42228a",
+                "6a1a8ede856a5900b589da0dda7463fe",
+                "17fa3a6d531feed5bb966689f4f8b958",
+                "0b4b48f80069e4a2b94bcdb5302a163e",
+                "d3da5be400d9a93049532d963872a05e",
+                // モルジアナ
+                "fb2bf71a60a98f7f5d632caf5b7fc4c4",
+            };
+            cards = cards.Where(x => !ignoreCardIds.Contains(x.ItemId)).ToList();
 
             File.WriteAllText(filePath, JsonConvert.SerializeObject(cards, Formatting.Indented));
         }
